@@ -12,6 +12,9 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
     // Updated: 2025-11-16 15:07
 
      is SepoliaConfig {
+    event GameStarted(address indexed player, uint256 gameNumber);
+    event GameCompleted(address indexed player, euint32 result);
+    event StatsUpdated(address indexed player, uint256 totalGames);
     struct Game {
         euint32 playerChoice;      // Encrypted player choice (0, 1, or 2)
         euint32 systemChoice;       // Encrypted system random choice (0, 1, or 2)
@@ -46,7 +49,10 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
         });
         
         gameCount[msg.sender]++;
-        
+
+        // Emit game started event
+        emit GameStarted(msg.sender, gameCount[msg.sender]);
+
         // Allow contract to access player choice
         FHE.allowThis(encryptedChoice);
         FHE.allow(encryptedChoice, msg.sender);
@@ -102,6 +108,9 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
         
         game.result = result;
         game.isCompleted = true;
+
+        // Emit game completed event
+        emit GameCompleted(msg.sender, result);
 
         // Update encrypted game statistics
         updateGameStats(msg.sender, result);
@@ -179,6 +188,9 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
         stats.totalGames++;
         stats.lastGameTimestamp = block.timestamp;
+
+        // Emit stats updated event
+        emit StatsUpdated(player, stats.totalGames);
 
         // Allow player to access their stats
         FHE.allowThis(stats.playerWins);
