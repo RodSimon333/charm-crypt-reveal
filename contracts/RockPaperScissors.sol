@@ -7,6 +7,7 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 /// @title Rock Paper Scissors Game with FHE
 /// @notice A privacy-preserving rock-paper-scissors game where player choices are encrypted
 /// @dev 0 = Rock, 1 = Scissors, 2 = Paper
+/// @dev Supports multi-round games with encrypted scoring
 
     // Updated: 2025-11-16 15:07
 
@@ -18,8 +19,17 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
         bool isCompleted;           // Whether the game is completed
     }
 
+    struct GameStats {
+        uint256 totalGames;
+        euint32 playerWins;         // Encrypted total player wins
+        euint32 systemWins;         // Encrypted total system wins
+        euint32 draws;              // Encrypted total draws
+        uint256 lastGameTimestamp;
+    }
+
     mapping(address => Game) public games;
     mapping(address => uint256) public gameCount;
+    mapping(address => GameStats) public gameStats;
 
     /// @notice Submit player's encrypted choice
     /// @param playerChoiceEuint32 The encrypted player choice (0=Rock, 1=Scissors, 2=Paper)
@@ -92,7 +102,10 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
         
         game.result = result;
         game.isCompleted = true;
-        
+
+        // Update encrypted game statistics
+        updateGameStats(msg.sender, result);
+
         // Allow contract and player to access results
         FHE.allowThis(game.systemChoice);
         FHE.allow(game.systemChoice, msg.sender);
@@ -121,6 +134,66 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
     /// @return count The number of games played
     function getGameCount(address player) external view returns (uint256) {
         return gameCount[player];
+    }
+
+    /// @notice Get player's encrypted game statistics
+    /// @param player The player's address
+    /// @return totalGames Total games played
+    /// @return playerWins Encrypted player wins count
+    /// @return systemWins Encrypted system wins count
+    /// @return draws Encrypted draws count
+    /// @return lastGameTimestamp Timestamp of last game
+    function getGameStats(address player) external view returns (
+        uint256 totalGames,
+        euint32 playerWins,
+        euint32 systemWins,
+        euint32 draws,
+        uint256 lastGameTimestamp
+    ) {
+        GameStats memory stats = gameStats[player];
+        return (stats.totalGames, stats.playerWins, stats.systemWins, stats.draws, stats.lastGameTimestamp);
+    }
+
+    /// @notice Update game statistics after game completion
+    /// @param player The player's address
+    /// @param result The game result (0=Draw, 1=Player Wins, 2=System Wins)
+    function updateGameStats(address player, euint32 result) internal {
+        GameStats storage stats = gameStats[player];
+
+        // Initialize stats if first game
+        if (stats.totalGames == 0) {
+            stats.playerWins = FHE.asEuint32(0);
+            stats.systemWins = FHE.asEuint32(0);
+            stats.draws = FHE.asEuint32(0);
+        }
+
+        // Update encrypted counters based on result
+        ebool isDraw = FHE.eq(result, FHE.asEuint32(0));
+        ebool isPlayerWin = FHE.eq(result, FHE.asEuint32(1));
+        ebool isSystemWin = FHE.eq(result, FHE.asEuint32(2));
+
+        // Increment appropriate counter
+        stats.draws = FHE.select(isDraw, FHE.add(stats.draws, FHE.asEuint32(1)), stats.draws);
+        stats.playerWins = FHE.select(isPlayerWin, FHE.add(stats.playerWins, FHE.asEuint32(1)), stats.playerWins);
+        stats.systemWins = FHE.select(isSystemWin, FHE.add(stats.systemWins, FHE.asEuint32(1)), stats.systemWins);
+
+        stats.totalGames++;
+        stats.lastGameTimestamp = block.timestamp;
+
+        // Allow player to access their stats
+        FHE.allowThis(stats.playerWins);
+        FHE.allowThis(stats.systemWins);
+        FHE.allowThis(stats.draws);
+        FHE.allow(stats.playerWins, player);
+        FHE.allow(stats.systemWins, player);
+        FHE.allow(stats.draws, player);
+    }
+
+    /// @notice Reset player statistics (for testing purposes)
+    /// @param player The player's address
+    function resetGameStats(address player) external {
+        require(msg.sender == player, "Can only reset own stats");
+        delete gameStats[player];
     }
 }
 
