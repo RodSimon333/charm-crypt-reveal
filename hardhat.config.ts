@@ -31,6 +31,9 @@ const config: HardhatUserConfig = {
     currency: "USD",
     enabled: process.env.REPORT_GAS ? true : false,
     excludeContracts: [],
+    gasPrice: 20,
+    coinmarketcap: vars.get("COINMARKETCAP_API_KEY", ""),
+    token: "ETH",
   },
   networks: {
     hardhat: {
@@ -77,8 +80,12 @@ const config: HardhatUserConfig = {
       optimizer: {
         enabled: true,
         runs: 800,
+        details: {
+          yul: false,
+        },
       },
       evmVersion: "cancun",
+      viaIR: true,
     },
   },
   typechain: {
