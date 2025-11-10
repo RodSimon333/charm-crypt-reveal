@@ -36,6 +36,7 @@ contract RockPaperScissors is SepoliaConfig {
         
         // Allow contract to access player choice
         FHE.allowThis(encryptedChoice);
+        FHE.allow(encryptedChoice, msg.sender);
     }
 
     /// @notice System submits random encrypted choice and calculates result
@@ -79,7 +80,7 @@ contract RockPaperScissors is SepoliaConfig {
         );
         
         // Combine all win cases
-        ebool playerWins = FHE.or(case1, case2);
+        ebool playerWins = FHE.or(case1, FHE.or(case2, case3));
         
         // Result: 0 if draw, 1 if player wins, 2 if system wins
         // First check if draw, if not then check if player wins
