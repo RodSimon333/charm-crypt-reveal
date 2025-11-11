@@ -465,8 +465,8 @@ export async function decryptEuint32(
  */
 export function resetFHEVMInstance() {
   fhevmInstance = null;
-  // Note: Keep isSDKInitialized = true because SDK only needs to be initialized once
-  // Resetting it would cause unnecessary reinitialization
+  isSDKInitialized = false;
+  // Reset SDK initialization flag to allow reinitialization on network switch
   console.log("[FHEVM] Instance reset");
 }
 
