@@ -94,12 +94,10 @@ const RockPaperScissorsGame = () => {
       );
 
       setResult(decryptedResult);
-      if (decryptedResult !== null) {
-        toast({
-          title: "Result Decrypted",
-          description: RESULT_LABELS[decryptedResult] || "Unknown result",
-        });
-      }
+      toast({
+        title: "Result Decrypted",
+        description: RESULT_LABELS[decryptedResult] || "Unknown result",
+      });
     } catch (error: any) {
       console.error("Failed to decrypt result:", error);
       
@@ -213,10 +211,10 @@ const RockPaperScissorsGame = () => {
     // Load immediately
     loadGameState();
     
-    // Then poll every 3 seconds
+    // Then poll every 2 seconds for faster updates
     const interval = setInterval(() => {
       loadGameState();
-    }, 3000);
+    }, 2000);
     
     return () => {
       clearInterval(interval);
