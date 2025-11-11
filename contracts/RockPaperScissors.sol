@@ -22,6 +22,9 @@ contract RockPaperScissors is SepoliaConfig {
     /// @param playerChoiceEuint32 The encrypted player choice (0=Rock, 1=Scissors, 2=Paper)
     /// @param inputProof The input proof for the encrypted choice
     function submitChoice(externalEuint32 playerChoiceEuint32, bytes calldata inputProof) external {
+        Game storage existingGame = games[msg.sender];
+        require(!existingGame.isCompleted || gameCount[msg.sender] == 0, "Previous game not completed");
+        
         euint32 encryptedChoice = FHE.fromExternal(playerChoiceEuint32, inputProof);
         
         // Initialize new game
@@ -45,6 +48,7 @@ contract RockPaperScissors is SepoliaConfig {
     function submitSystemChoice(externalEuint32 systemChoiceEuint32, bytes calldata inputProof) external {
         Game storage game = games[msg.sender];
         require(!game.isCompleted, "Game already completed");
+        require(gameCount[msg.sender] > 0, "No game started");
         
         euint32 encryptedSystemChoice = FHE.fromExternal(systemChoiceEuint32, inputProof);
         game.systemChoice = encryptedSystemChoice;
