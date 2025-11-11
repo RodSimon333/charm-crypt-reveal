@@ -55,13 +55,13 @@ const RockPaperScissorsGame = () => {
 
   // Initialize FHEVM
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && chainId) {
       initializeFHEVM();
     } else {
       resetFHEVMInstance();
       setFhevm(null);
     }
-  }, [isConnected]);
+  }, [isConnected, chainId]);
 
   // Decrypt result function - defined before loadGameState to avoid circular dependency
   const decryptResult = useCallback(async (encryptedResult: string) => {
