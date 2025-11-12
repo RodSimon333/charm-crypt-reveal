@@ -193,6 +193,9 @@ describe("RockPaperScissors", function () {
         .createEncryptedInput(rockPaperScissorsContractAddress, signers.bob.address)
         .add32(testCase.player)
         .encrypt();
+      
+      // Verify encryption was successful
+      expect(encryptedPlayerChoice.handles.length).to.be.greaterThan(0);
 
       let tx = await rockPaperScissorsContract
         .connect(signers.bob)
