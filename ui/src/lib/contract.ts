@@ -1,7 +1,7 @@
 // Contract addresses for different networks
 const CONTRACT_ADDRESSES: Record<number, string> = {
-  31337: "0x5FbDB2315678afecb367f032d93F642f64180aa3", // localhost (Hardhat) - from deployments/localhost/RockPaperScissors.json
-  11155111: "0x3cD654E3F1033A85D026B81a8C9f1Bf31425e997", // Sepolia testnet - deployed on 2025-01-15
+  31337: "0x5FbDB2315678afecb367f032d93F642f64180aa3", // localhost (Hardhat)
+  11155111: "0x3cD654E3F1033A85D026B81a8C9f1Bf31425e997", // Sepolia testnet
 };
 
 // Get contract address based on chainId
