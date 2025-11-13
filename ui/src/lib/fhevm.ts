@@ -192,8 +192,8 @@ export async function encryptChoice(
     if (!userAddress || userAddress === "0x0000000000000000000000000000000000000000") {
       throw new Error("Invalid user address");
     }
-    if (choice < 0 || choice > 2) {
-      throw new Error("Choice must be 0 (Rock), 1 (Scissors), or 2 (Paper)");
+    if (choice < 0 || choice > 2 || !Number.isInteger(choice)) {
+      throw new Error("Choice must be an integer: 0 (Rock), 1 (Scissors), or 2 (Paper)");
     }
 
     console.log("[encryptChoice] Creating encrypted input...");
@@ -324,25 +324,35 @@ export async function batchDecrypt(
       
       console.log("[FHEVM] 🔓 Decrypting with ACL authorization...");
       
-      // Decrypt each handle
+      // Decrypt each handle with retry logic
       const decrypted: Record<string, number> = {};
+      const maxRetries = 2;
       
       for (const h of validHandles) {
-        try {
-          console.log(`[FHEVM] Decrypting handle: ${h.handle.slice(0, 20)}...`);
-          
-          const value = await userDecryptHandleBytes32(
-            provider,
-            signer,
-            h.contractAddress,
-            h.handle,
-            userAddress
-          );
-          
-          decrypted[h.handle] = Number(value);
-          console.log(`[FHEVM]   ✅ Decrypted: ${value}`);
-        } catch (error: any) {
-          console.error(`[FHEVM]   ❌ Failed to decrypt ${h.handle}:`, error.message);
+        let retries = 0;
+        while (retries <= maxRetries) {
+          try {
+            console.log(`[FHEVM] Decrypting handle: ${h.handle.slice(0, 20)}... (attempt ${retries + 1})`);
+            
+            const value = await userDecryptHandleBytes32(
+              provider,
+              signer,
+              h.contractAddress,
+              h.handle,
+              userAddress
+            );
+            
+            decrypted[h.handle] = Number(value);
+            console.log(`[FHEVM]   ✅ Decrypted: ${value}`);
+            break;
+          } catch (error: any) {
+            retries++;
+            if (retries > maxRetries) {
+              console.error(`[FHEVM]   ❌ Failed to decrypt ${h.handle} after ${maxRetries + 1} attempts:`, error.message);
+            } else {
+              console.warn(`[FHEVM]   ⚠️ Retry ${retries}/${maxRetries} for ${h.handle}`);
+            }
+          }
         }
       }
       

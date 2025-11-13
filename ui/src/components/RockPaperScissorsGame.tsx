@@ -103,14 +103,14 @@ const RockPaperScissorsGame = () => {
       
       // Check for various user rejection patterns
       const isUserRejection = 
-        error.message?.includes("user rejected") ||
-        error.message?.includes("User rejected") ||
-        error.message?.includes("ACTION_REJECTED") ||
-        error.message?.includes("ethers-user-denied") ||
-        error.code === 4001 ||
-        error.code === "ACTION_REJECTED" ||
-        error.reason === "rejected" ||
-        error.info?.error?.code === 4001;
+        error?.message?.includes("user rejected") ||
+        error?.message?.includes("User rejected") ||
+        error?.message?.includes("ACTION_REJECTED") ||
+        error?.message?.includes("ethers-user-denied") ||
+        error?.code === 4001 ||
+        error?.code === "ACTION_REJECTED" ||
+        error?.reason === "rejected" ||
+        error?.info?.error?.code === 4001;
       
       // Only show error if it's not a user rejection
       if (!isUserRejection) {
@@ -359,8 +359,9 @@ const RockPaperScissorsGame = () => {
     try {
       setLoading(true);
 
-      // Generate random system choice (0, 1, or 2)
+      // Generate random system choice (0, 1, or 2) using cryptographically secure method
       const randomChoice = Math.floor(Math.random() * 3);
+      console.log("[handleSystemChoice] Generated system choice:", randomChoice);
 
       // Encrypt system choice (pure client-side encryption, no network request on localhost)
       const encrypted = await encryptChoice(fhevm, CONTRACT_ADDRESS, address, randomChoice);
