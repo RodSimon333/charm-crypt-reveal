@@ -10,7 +10,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
 
-  console.log(`RockPaperScissors contract: `, deployedRockPaperScissors.address);
+  console.log(`RockPaperScissors contract deployed at: ${deployedRockPaperScissors.address}`);
+  console.log(`Transaction hash: ${deployedRockPaperScissors.transactionHash || "N/A"}`);
 };
 export default func;
 func.id = "deploy_rockPaperScissors"; // id required to prevent reexecution
