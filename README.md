@@ -2,6 +2,12 @@
 
 A fully encrypted rock-paper-scissors game built with FHEVM (Fully Homomorphic Encryption Virtual Machine) and Zama's privacy-preserving technology.
 
+## Live Demo & Demo Video
+
+🚀 **[Live Demo](https://charm-crypt-reveal-1.vercel.app/)** - Try the game in your browser!
+
+🎥 **[Demo Video](https://github.com/RodSimon333/charm-crypt-reveal/blob/main/charm-crypt-reveal.mp4)** - Watch the game in action.
+
 ## Features
 
 - **Privacy-Preserving**: Player choices are encrypted and never revealed until game completion
@@ -14,41 +20,56 @@ A fully encrypted rock-paper-scissors game built with FHEVM (Fully Homomorphic E
 ```
 charm-crypt-reveal/
 ├── contracts/
-�?  └── RockPaperScissors.sol    # Main game contract
+│   └── RockPaperScissors.sol    # Main FHE-enabled game contract
 ├── test/
-�?  ├── RockPaperScissors.ts      # Local network tests
-�?  └── RockPaperScissorsSepolia.ts # Sepolia testnet tests
+│   ├── RockPaperScissors.ts      # Local network tests
+│   └── RockPaperScissorsSepolia.ts # Sepolia testnet tests
 ├── tasks/
-�?  └── RockPaperScissors.ts      # Hardhat tasks for interaction
+│   └── RockPaperScissors.ts      # Hardhat tasks for contract interaction
 ├── ui/
-�?  └── src/
-�?      ├── components/
-�?      �?  └── RockPaperScissorsGame.tsx  # Game UI component
-�?      └── lib/
-�?          └── fhevm.ts          # FHEVM integration utilities
-└── deploy/
-    └── deploy.ts                 # Deployment script
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── RockPaperScissorsGame.tsx  # React game UI component
+│   │   └── lib/
+│   │       └── fhevm.ts          # FHEVM encryption/decryption utilities
+│   ├── public/                   # Static assets
+│   └── index.html               # Main HTML template
+├── deploy/
+│   └── deploy.ts                 # Contract deployment script
+├── scripts/                      # Utility scripts
+└── hardhat.config.ts            # Hardhat configuration
 ```
 
 ## Prerequisites
 
 - Node.js >= 20
 - npm >= 7.0.0
+- MetaMask wallet extension (for Sepolia testnet)
 - Hardhat node running (for local development)
 
-## Installation
+## Quick Start
 
-1. Install dependencies:
+### 1. Install Dependencies
+
 ```bash
+# Install root dependencies
 npm install
-cd ui && npm install
+
+# Install UI dependencies
+cd ui && npm install && cd ..
 ```
 
-2. Set up environment variables (optional):
+### 2. Set Up Environment Variables (Optional)
+
+Create a `.env` file in the root directory:
+
 ```bash
-# For Sepolia deployment
-export INFURA_API_KEY=your_infura_key
-export ETHERSCAN_API_KEY=your_etherscan_key
+# For Sepolia deployment and verification
+INFURA_API_KEY=your_infura_api_key
+ETHERSCAN_API_KEY=your_etherscan_api_key
+
+# UI contract address (after deployment)
+VITE_CONTRACT_ADDRESS=your_deployed_contract_address
 ```
 
 ## Local Development
@@ -127,17 +148,117 @@ npx hardhat test test/RockPaperScissorsSepolia.ts --network sepolia
    - Encrypted system choice is submitted to the contract
    - Contract calculates the result using encrypted comparison
 
-3. **Result Decryption**: 
+3. **Result Decryption**:
    - Result is decrypted by the player
    - Only the result (0=Draw, 1=Player Wins, 2=System Wins) is revealed
    - Player and system choices remain encrypted
 
-## Contract Functions
+## FHE Encryption & Decryption Logic
 
-- `submitChoice(bytes32 playerChoiceEuint32, bytes calldata inputProof)`: Submit encrypted player choice
-- `submitSystemChoice(bytes32 systemChoiceEuint32, bytes calldata inputProof)`: Submit encrypted system choice and calculate result
+### Client-Side Encryption
+
+The frontend uses Zama's FHEVM SDK to encrypt player choices before submitting to the blockchain:
+
+```typescript
+// Initialize FHEVM instance
+const fhevm = await getFHEVMInstance(chainId);
+
+// Encrypt player choice (0=Rock, 1=Scissors, 2=Paper)
+const encrypted = await encryptChoice(fhevm, contractAddress, userAddress, choice);
+
+// encrypted contains:
+// - handles: Array of encrypted data handles
+// - inputProof: Zero-knowledge proof for input verification
+```
+
+### On-Chain Encrypted Operations
+
+The contract performs all game logic on encrypted data without decryption:
+
+```solidity
+// Compare encrypted choices homomorphically
+ebool isDraw = FHE.eq(playerChoice, systemChoice);
+
+// Calculate win conditions using encrypted arithmetic
+ebool playerWins = FHE.or(
+  FHE.and(FHE.eq(playerChoice, FHE.asEuint32(0)), FHE.eq(systemChoice, FHE.asEuint32(1))),
+  FHE.and(FHE.eq(playerChoice, FHE.asEuint32(1)), FHE.eq(systemChoice, FHE.asEuint32(2))),
+  FHE.and(FHE.eq(playerChoice, FHE.asEuint32(2)), FHE.eq(systemChoice, FHE.asEuint32(0)))
+);
+
+// Compute result using encrypted select operations
+euint32 result = FHE.select(isDraw, FHE.asEuint32(0),
+  FHE.select(playerWins, FHE.asEuint32(1), FHE.asEuint32(2)));
+```
+
+### Client-Side Decryption
+
+Only the game result is decrypted, preserving privacy of individual choices:
+
+```typescript
+// Decrypt result using user's private key
+const decryptedResult = await decryptEuint32(
+  fhevm,
+  encryptedResultHandle,
+  contractAddress,
+  userAddress,
+  signer,
+  chainId
+);
+
+// Result reveals only: 0=Draw, 1=Player Wins, 2=System Wins
+// Individual choices (Rock/Scissors/Paper) remain encrypted
+```
+
+### Network-Specific Implementation
+
+**Local Network (31337)**: Uses `@fhevm/mock-utils` for fast, signature-free encryption/decryption during development.
+
+**Sepolia Testnet (11155111)**: Uses `@zama-fhe/relayer-sdk` with MetaMask signatures for production-ready encryption/decryption.
+
+## Smart Contract Architecture
+
+### RockPaperScissors.sol
+
+The main contract implements a privacy-preserving rock-paper-scissors game using FHEVM:
+
+```solidity
+contract RockPaperScissors {
+    struct Game {
+        euint32 playerChoice;      // Encrypted player choice (0=Rock, 1=Scissors, 2=Paper)
+        euint32 systemChoice;      // Encrypted system random choice
+        euint32 result;            // Encrypted result (0=Draw, 1=Player Wins, 2=System Wins)
+        bool isCompleted;          // Game completion status
+    }
+
+    mapping(address => Game) public games;
+    mapping(address => uint256) public gameCount;
+}
+```
+
+### Key Contract Functions
+
+- `submitChoice(externalEuint32 playerChoiceEuint32, bytes calldata inputProof)`: Submit encrypted player choice
+- `submitSystemChoice(externalEuint32 systemChoiceEuint32, bytes calldata inputProof)`: Submit encrypted system choice and calculate result
 - `getGame(address player)`: Get game state (encrypted choices and result)
 - `getGameCount(address player)`: Get number of games played by a player
+
+### Game Logic Implementation
+
+The contract calculates the game result using fully homomorphic encryption:
+
+```solidity
+// Result logic: 0 = Draw, 1 = Player Wins, 2 = System Wins
+ebool isDraw = FHE.eq(game.playerChoice, encryptedSystemChoice);
+
+// Player wins conditions (Rock>Scissors, Scissors>Paper, Paper>Rock)
+ebool case1 = FHE.and(FHE.eq(game.playerChoice, FHE.asEuint32(0)), FHE.eq(encryptedSystemChoice, FHE.asEuint32(1)));
+ebool case2 = FHE.and(FHE.eq(game.playerChoice, FHE.asEuint32(1)), FHE.eq(encryptedSystemChoice, FHE.asEuint32(2)));
+ebool case3 = FHE.and(FHE.eq(game.playerChoice, FHE.asEuint32(2)), FHE.eq(encryptedSystemChoice, FHE.asEuint32(0)));
+
+ebool playerWins = FHE.or(case1, FHE.or(case2, case3));
+euint32 result = FHE.select(isDraw, FHE.asEuint32(0), FHE.select(playerWins, FHE.asEuint32(1), FHE.asEuint32(2)));
+```
 
 ## Frontend Usage
 
@@ -148,44 +269,44 @@ npx hardhat test test/RockPaperScissorsSepolia.ts --network sepolia
 5. Click "Submit System Choice" to complete the game
 6. Result will be automatically decrypted and displayed
 
-## Technologies
+## Technologies & Architecture
 
-- **Solidity**: Smart contract development
-- **FHEVM**: Fully Homomorphic Encryption for privacy
-- **Hardhat**: Development environment
-- **React + TypeScript**: Frontend framework
-- **RainbowKit + Wagmi**: Wallet connection
-- **Vite**: Build tool
-- **Tailwind CSS**: Styling
+### Core Technologies
+
+- **FHEVM (Fully Homomorphic Encryption Virtual Machine)**: Enables computation on encrypted data without decryption
+- **Solidity ^0.8.24**: Smart contract development with FHE support
+- **@fhevm/solidity**: FHE-enabled Solidity library
+- **@zama-fhe/relayer-sdk**: Production FHE operations on Sepolia
+- **@fhevm/mock-utils**: Development FHE operations on local network
+
+### Frontend Stack
+
+- **React 18 + TypeScript**: Modern frontend framework
+- **RainbowKit + Wagmi**: Wallet connection and blockchain interaction
+- **Vite**: Fast build tool and dev server
+- **Tailwind CSS**: Utility-first CSS framework
+- **shadcn/ui**: Component library
+- **Lucide React**: Icon library
+
+### Development & Testing
+
+- **Hardhat**: Ethereum development environment
+- **@fhevm/hardhat-plugin**: FHEVM integration for Hardhat
+- **hardhat-deploy**: Contract deployment management
+- **TypeChain**: TypeScript bindings for contracts
+- **Chai + Mocha**: Testing framework
+- **solidity-coverage**: Code coverage analysis
+
+### Deployment & Infrastructure
+
+- **Vercel**: Frontend deployment platform
+- **Infura**: Blockchain node provider
+- **Etherscan**: Contract verification
 
 ## License
 
 MIT
 
-
 ---
-Last updated: 2025-11-16 15:08
 
-
----
-Update: 2025-11-16 15:08
-
-
----
-Update: 2025-11-16 15:08
-
-
----
-Update: 2025-11-16 15:08
-
-
----
-Update: 2025-11-16 15:08
-
-
----
-Update: 2025-11-16 15:08
-
-
----
-Update: 2025-11-16 15:08
+**Last updated**: November 18, 2025
