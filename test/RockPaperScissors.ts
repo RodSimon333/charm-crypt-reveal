@@ -230,5 +230,102 @@ describe("RockPaperScissors", function () {
       expect(decryptedResult).to.eq(testCase.expected);
     }
   });
+
+  describe("Game Statistics", function () {
+    it("should track encrypted game statistics", async function () {
+      // Alice plays first game (Rock vs Scissors - Alice wins)
+      const aliceChoice1 = 0; // Rock
+      const systemChoice1 = 1; // Scissors
+
+      const aliceEncrypted1 = await fhevm
+        .createEncryptedInput(rockPaperScissorsContractAddress, signers.alice.address)
+        .add32(aliceChoice1)
+        .encrypt();
+
+      const systemEncrypted1 = await fhevm
+        .createEncryptedInput(rockPaperScissorsContractAddress, signers.alice.address)
+        .add32(systemChoice1)
+        .encrypt();
+
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .submitChoice(aliceEncrypted1.handles[0], aliceEncrypted1.inputProof);
+
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .submitSystemChoice(systemEncrypted1.handles[0], systemEncrypted1.inputProof);
+
+      // Check stats after first game
+      const statsAfterGame1 = await rockPaperScissorsContract.getGameStats(signers.alice.address);
+      expect(statsAfterGame1[0]).to.equal(1n); // totalGames
+
+      // Alice plays second game (Paper vs Rock - Alice wins)
+      const aliceChoice2 = 2; // Paper
+      const systemChoice2 = 0; // Rock
+
+      const aliceEncrypted2 = await fhevm
+        .createEncryptedInput(rockPaperScissorsContractAddress, signers.alice.address)
+        .add32(aliceChoice2)
+        .encrypt();
+
+      const systemEncrypted2 = await fhevm
+        .createEncryptedInput(rockPaperScissorsContractAddress, signers.alice.address)
+        .add32(systemChoice2)
+        .encrypt();
+
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .submitChoice(aliceEncrypted2.handles[0], aliceEncrypted2.inputProof);
+
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .submitSystemChoice(systemEncrypted2.handles[0], systemEncrypted2.inputProof);
+
+      // Check stats after second game
+      const statsAfterGame2 = await rockPaperScissorsContract.getGameStats(signers.alice.address);
+      expect(statsAfterGame2[0]).to.equal(2n); // totalGames
+
+      // Decrypt and verify win count
+      const aliceWins = await fhevm.decrypt32(statsAfterGame2[1]);
+      expect(aliceWins).to.equal(2); // Alice should have 2 wins
+    });
+
+    it("should allow resetting player statistics", async function () {
+      // Play a game first
+      const aliceChoice = 0; // Rock
+      const systemChoice = 1; // Scissors
+
+      const aliceEncrypted = await fhevm
+        .createEncryptedInput(rockPaperScissorsContractAddress, signers.alice.address)
+        .add32(aliceChoice)
+        .encrypt();
+
+      const systemEncrypted = await fhevm
+        .createEncryptedInput(rockPaperScissorsContractAddress, signers.alice.address)
+        .add32(systemChoice)
+        .encrypt();
+
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .submitChoice(aliceEncrypted.handles[0], aliceEncrypted.inputProof);
+
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .submitSystemChoice(systemEncrypted.handles[0], systemEncrypted.inputProof);
+
+      // Verify stats exist
+      let stats = await rockPaperScissorsContract.getGameStats(signers.alice.address);
+      expect(stats[0]).to.equal(1n);
+
+      // Reset stats
+      await rockPaperScissorsContract
+        .connect(signers.alice)
+        .resetGameStats(signers.alice.address);
+
+      // Verify stats are reset
+      stats = await rockPaperScissorsContract.getGameStats(signers.alice.address);
+      expect(stats[0]).to.equal(0n);
+    });
+  });
 });
 

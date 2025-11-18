@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/hooks/use-toast";
 import { getFHEVMInstance, encryptChoice, decryptEuint32, resetFHEVMInstance } from "@/lib/fhevm";
 import { getContractAddress } from "@/lib/contract";
-import { Hand, Circle, X, Loader2 } from "lucide-react";
+import { Hand, Circle, X, Loader2, Trophy, Target, Users } from "lucide-react";
 import RockPaperScissorsArtifact from "@/abi/RockPaperScissors.json";
 import type { FhevmInstance } from "@zama-fhe/relayer-sdk/bundle";
 
@@ -50,6 +50,13 @@ const RockPaperScissorsGame = () => {
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [lastDecryptedResult, setLastDecryptedResult] = useState<string | null>(null);
   const [isStartingNewGame, setIsStartingNewGame] = useState(false);
+  const [gameStats, setGameStats] = useState<{
+    totalGames: bigint;
+    playerWins: number | null;
+    systemWins: number | null;
+    draws: number | null;
+    lastGameTimestamp: bigint;
+  } | null>(null);
   
   // Refs to track timeouts for cleanup
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
@@ -143,6 +150,54 @@ const RockPaperScissorsGame = () => {
     }
   }, [fhevm, address, CONTRACT_ADDRESS, isDecrypting, chainId]);
 
+  // Load game statistics from contract
+  const loadGameStats = useCallback(async () => {
+    if (!isConnected || !address || !CONTRACT_ADDRESS) {
+      return;
+    }
+
+    try {
+      const provider = new BrowserProvider((window as any).ethereum);
+      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+
+      const statsData = await contract.getGameStats(address);
+      const [totalGames, encryptedPlayerWins, encryptedSystemWins, encryptedDraws, lastGameTimestamp] = statsData;
+
+      setGameStats({
+        totalGames: totalGames as bigint,
+        playerWins: null, // Will be decrypted if needed
+        systemWins: null,
+        draws: null,
+        lastGameTimestamp: lastGameTimestamp as bigint
+      });
+
+      // Decrypt stats if FHEVM is available and there are games
+      if (fhevm && totalGames > 0n) {
+        try {
+          const signer = await provider.getSigner();
+
+          const [playerWins, systemWins, draws] = await Promise.all([
+            decryptEuint32(fhevm, encryptedPlayerWins, CONTRACT_ADDRESS, address, signer, chainId),
+            decryptEuint32(fhevm, encryptedSystemWins, CONTRACT_ADDRESS, address, signer, chainId),
+            decryptEuint32(fhevm, encryptedDraws, CONTRACT_ADDRESS, address, signer, chainId)
+          ]);
+
+          setGameStats(prev => prev ? {
+            ...prev,
+            playerWins,
+            systemWins,
+            draws
+          } : null);
+        } catch (error) {
+          console.warn("[loadGameStats] Failed to decrypt stats:", error);
+          // Keep null values for stats that couldn't be decrypted
+        }
+      }
+    } catch (error) {
+      console.warn("[loadGameStats] Failed to load game stats:", error);
+    }
+  }, [isConnected, address, CONTRACT_ADDRESS, fhevm, chainId]);
+
   // Load game state from contract
   const loadGameState = useCallback(async () => {
     if (!isConnected || !address || !CONTRACT_ADDRESS || CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
@@ -214,7 +269,7 @@ const RockPaperScissorsGame = () => {
     }
   }, [isConnected, address, CONTRACT_ADDRESS, fhevm, isDecrypting, lastDecryptedResult, decryptResult, isStartingNewGame]);
 
-  // Load game state periodically and after transactions
+  // Load game state and stats periodically and after transactions
   useEffect(() => {
     if (!isConnected || !address || !CONTRACT_ADDRESS) {
       return;
@@ -222,16 +277,18 @@ const RockPaperScissorsGame = () => {
 
     // Load immediately
     loadGameState();
-    
+    loadGameStats();
+
     // Then poll every 3 seconds
     const interval = setInterval(() => {
       loadGameState();
+      loadGameStats();
     }, 3000);
-    
+
     return () => {
       clearInterval(interval);
     };
-  }, [loadGameState]);
+  }, [loadGameState, loadGameStats]);
 
   const initializeFHEVM = async () => {
     try {
@@ -324,9 +381,10 @@ const RockPaperScissorsGame = () => {
         description: `Your encrypted choice has been submitted`,
       });
 
-      // Reload game state after a short delay
+      // Reload game state and stats after a short delay
       const timeoutId = setTimeout(() => {
         loadGameState();
+        loadGameStats();
       }, 1000);
       timeoutRefs.current.push(timeoutId);
     } catch (error: any) {
@@ -400,9 +458,10 @@ const RockPaperScissorsGame = () => {
         description: "Result calculated! Decrypting...",
       });
 
-      // Reload game state after a short delay
+      // Reload game state and stats after a short delay
       const timeoutId = setTimeout(() => {
         loadGameState();
+        loadGameStats();
       }, 1000);
       timeoutRefs.current.push(timeoutId);
     } catch (error: any) {
@@ -480,6 +539,37 @@ const RockPaperScissorsGame = () => {
           {gameCount > 0n && ` Games played: ${gameCount.toString()}`}
         </CardDescription>
       </CardHeader>
+      {gameStats && gameStats.totalGames > 0n && (
+        <div className="px-6 pb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="h-4 w-4 text-yellow-500" />
+            <span className="text-sm font-medium text-muted-foreground">Your Statistics</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+              <Trophy className="h-5 w-5 mx-auto mb-1 text-green-600 dark:text-green-400" />
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {gameStats.playerWins ?? "?"}
+              </div>
+              <div className="text-xs text-muted-foreground">Wins</div>
+            </div>
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
+              <Target className="h-5 w-5 mx-auto mb-1 text-red-600 dark:text-red-400" />
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {gameStats.systemWins ?? "?"}
+              </div>
+              <div className="text-xs text-muted-foreground">Losses</div>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+              <Users className="h-5 w-5 mx-auto mb-1 text-blue-600 dark:text-blue-400" />
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {gameStats.draws ?? "?"}
+              </div>
+              <div className="text-xs text-muted-foreground">Draws</div>
+            </div>
+          </div>
+        </div>
+      )}
       <CardContent className="space-y-6">
         {!gameCompleted ? (
           <>
