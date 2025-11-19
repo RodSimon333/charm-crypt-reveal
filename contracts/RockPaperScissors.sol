@@ -38,6 +38,9 @@ contract RockPaperScissors is SepoliaConfig {
         
         gameCount[msg.sender]++;
         
+        // Emit event for game start
+        emit GameStarted(msg.sender, gameCount[msg.sender]);
+        
         // Allow contract to access player choice
         FHE.allowThis(encryptedChoice);
         FHE.allow(encryptedChoice, msg.sender);
@@ -94,6 +97,9 @@ contract RockPaperScissors is SepoliaConfig {
         
         game.result = result;
         game.isCompleted = true;
+        
+        // Emit event for game completion
+        emit GameCompleted(msg.sender, gameCount[msg.sender]);
         
         // Allow contract and player to access results
         FHE.allowThis(game.systemChoice);
