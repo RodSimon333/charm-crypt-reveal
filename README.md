@@ -2,6 +2,8 @@
 
 A fully encrypted rock-paper-scissors game built with FHEVM (Fully Homomorphic Encryption Virtual Machine) and Zama's privacy-preserving technology.
 
+**Live Application**: [https://charm-crypt-reveal.vercel.app/](https://charm-crypt-reveal.vercel.app/)
+
 ## Features
 
 - **Privacy-Preserving**: Player choices are encrypted and never revealed until game completion

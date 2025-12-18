@@ -1,48 +1,71 @@
-import { Flame } from "lucide-react";
+import { motion } from "framer-motion";
+import { Sparkles, Github, Twitter, Globe } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="relative py-16 border-t border-border/50 overflow-hidden">
-      {/* Floating Lanterns */}
+    <footer className="relative py-12 border-t border-border/30 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-4 left-[10%] floating-animation opacity-60" style={{ animationDelay: '0s' }}>
-          <Flame className="h-8 w-8 text-secondary" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--amber)))' }} />
-        </div>
-        <div className="absolute top-8 left-[30%] floating-animation opacity-50" style={{ animationDelay: '1s' }}>
-          <Flame className="h-6 w-6 text-secondary" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--amber)))' }} />
-        </div>
-        <div className="absolute top-6 right-[20%] floating-animation opacity-70" style={{ animationDelay: '2s' }}>
-          <Flame className="h-7 w-7 text-secondary" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--amber)))' }} />
-        </div>
-        <div className="absolute top-10 right-[45%] floating-animation opacity-40" style={{ animationDelay: '1.5s' }}>
-          <Flame className="h-5 w-5 text-secondary" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--amber)))' }} />
-        </div>
-        <div className="absolute top-4 right-[70%] floating-animation opacity-55" style={{ animationDelay: '0.5s' }}>
-          <Flame className="h-6 w-6 text-secondary" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--amber)))' }} />
-        </div>
+        {[...Array(5)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              left: `${15 + i * 20}%`,
+              top: `${20 + (i % 3) * 20}%`,
+            }}
+            animate={{
+              y: [-10, 10, -10],
+              opacity: [0.3, 0.7, 0.3],
+            }}
+            transition={{
+              duration: 3 + i * 0.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 0.3,
+            }}
+          >
+            <Sparkles
+              className="h-4 w-4 text-primary"
+              style={{ filter: "drop-shadow(0 0 8px hsl(var(--neon-purple)))" }}
+            />
+          </motion.div>
+        ))}
       </div>
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-left">
-            <h3 className="text-2xl font-cinzel font-bold glow-text mb-2">
-              MysticRaffle Pavilion
-            </h3>
-            <p className="font-crimson text-muted-foreground">
-              Where cryptographic magic meets fortune
-            </p>
+            <h3 className="text-xl font-bold glow-text mb-2">Charm Crypt Reveal</h3>
+            <p className="text-sm text-muted-foreground">Where cryptographic magic meets gaming</p>
           </div>
-          
-          <div className="flex flex-col md:flex-row items-center gap-8 font-crimson text-sm text-muted-foreground">
-            <a href="#" className="hover:text-secondary transition-colors">About</a>
-            <a href="#" className="hover:text-secondary transition-colors">How It Works</a>
-            <a href="#" className="hover:text-secondary transition-colors">Terms</a>
-            <a href="#" className="hover:text-secondary transition-colors">Support</a>
+
+          <div className="flex items-center gap-6">
+            <motion.a
+              href="#"
+              className="text-muted-foreground hover:text-primary transition-colors"
+              whileHover={{ scale: 1.2, rotate: 5 }}
+            >
+              <Github className="h-5 w-5" />
+            </motion.a>
+            <motion.a
+              href="#"
+              className="text-muted-foreground hover:text-primary transition-colors"
+              whileHover={{ scale: 1.2, rotate: -5 }}
+            >
+              <Twitter className="h-5 w-5" />
+            </motion.a>
+            <motion.a
+              href="#"
+              className="text-muted-foreground hover:text-primary transition-colors"
+              whileHover={{ scale: 1.2, rotate: 5 }}
+            >
+              <Globe className="h-5 w-5" />
+            </motion.a>
           </div>
         </div>
-        
-        <div className="mt-12 pt-8 border-t border-border/30 text-center font-crimson text-sm text-muted-foreground">
-          <p>© 2024 MysticRaffle Pavilion. All enchantments reserved.</p>
+
+        <div className="mt-8 pt-6 border-t border-border/20 text-center text-sm text-muted-foreground">
+          <p>&copy; 2024 Charm Crypt Reveal. Built with FHE technology.</p>
         </div>
       </div>
     </footer>

@@ -4,14 +4,13 @@ import App from "./App.tsx";
 import "./index.css";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { RainbowKitProvider, lightTheme } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { WagmiProvider, createConfig } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { http } from "viem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { defineChain } from "viem";
 
-// Define localhost chain with correct chainId (31337 for Hardhat)
 const localhost = defineChain({
   id: 31337,
   name: "Localhost",
@@ -27,10 +26,8 @@ const localhost = defineChain({
   },
 });
 
-// Get Infura API Key from environment variables
 const INFURA_API_KEY = import.meta.env.VITE_INFURA_API_KEY || "";
 
-// Use basic config without WalletConnect for local development
 const config = createConfig({
   chains: [localhost, sepolia],
   transports: {
@@ -41,7 +38,7 @@ const config = createConfig({
     [sepolia.id]: http(
       INFURA_API_KEY && INFURA_API_KEY !== ""
         ? `https://sepolia.infura.io/v3/${INFURA_API_KEY}`
-        : "https://rpc.sepolia.org"
+        : "https://rpc.sepolia.org",
     ),
   },
   multiInjectedProviderDiscovery: true,
@@ -54,10 +51,17 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
-        <RainbowKitProvider theme={lightTheme({ borderRadius: "large" })}>
+        <RainbowKitProvider
+          theme={darkTheme({
+            accentColor: "hsl(270, 70%, 55%)",
+            accentColorForeground: "white",
+            borderRadius: "large",
+            overlayBlur: "small",
+          })}
+        >
           <App />
         </RainbowKitProvider>
       </WagmiProvider>
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );
